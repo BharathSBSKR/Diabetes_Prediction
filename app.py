@@ -38,30 +38,71 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+# @app.route('/predict', methods=['POST'])
+# def predict():
+#     try:
+#         # Extract input features
+#         input_features = [float(x) for x in request.form.values()]
+        
+#         # Load scaler and model
+#         with open('scaler.pkl', 'rb') as f:
+#             scaler = pickle.load(f)
+        
+#         with open('diabetes_model.pkl', 'rb') as f:
+#             model = pickle.load(f)
+        
+#         # Preprocess input
+#         input_scaled = scaler.transform([input_features])
+        
+#         # Make prediction
+#         prediction = model.predict(input_scaled)[0]
+        
+#         # Return result
+#         result = "Diabetes Detected" if prediction == 1 else "No Diabetes Detected"
+#         return render_template('index.html', prediction=result)
+#     except Exception as e:
+#         return jsonify({"error": str(e)})
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Extract input features
-        input_features = [float(x) for x in request.form.values()]
-        
+        # Check for JSON data in the request
+        if request.is_json:
+            input_features = request.json.get("features", [])
+        else:
+            # Fallback to form data
+            input_features = [float(x) for x in request.form.values()]
+
+        # Validate input features
+        if not input_features or len(input_features) != 8:
+            return jsonify({"error": "Invalid input data. Expecting 8 features."}), 400
+
         # Load scaler and model
         with open('scaler.pkl', 'rb') as f:
             scaler = pickle.load(f)
-        
+
         with open('diabetes_model.pkl', 'rb') as f:
             model = pickle.load(f)
-        
+
         # Preprocess input
         input_scaled = scaler.transform([input_features])
-        
+
         # Make prediction
         prediction = model.predict(input_scaled)[0]
-        
+
         # Return result
         result = "Diabetes Detected" if prediction == 1 else "No Diabetes Detected"
+        
+        # If JSON request, return JSON response
+        if request.is_json:
+            return jsonify({"prediction": result})
+        
+        # If form request, render template
         return render_template('index.html', prediction=result)
+
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
